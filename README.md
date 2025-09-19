@@ -2,7 +2,47 @@
 **Bertrandt Interactive Display System**
 
 ## 📋 Übersicht
-Professionelles GUI-System für interaktive Messe-Präsentationen mit ESP32/Arduino GIGA Hardware-Integration.
+✅ Behobene Probleme:
+
+Bilderspeicherung im Creator:
+
+Bilder werden jetzt korrekt in data/images/ gespeichert
+PIL-Images werden als Referenz gespeichert für bessere Performance
+Automatische Pfadverwaltung und Backup-System
+
+
+Vollbild-Modus für Demo:
+
+Neue Vollbild-Präsentationsansicht mit Tastatursteuerung
+Synchronisation zwischen normalem und Vollbild-Modus
+Touch-freundliche Bedienung
+
+
+Symbol- und Emoji-Panel:
+
+Erweiterte Toolbox mit Satzzeichen: . , ; : ! ? - – — ...
+Mathematische Symbole: ± × ÷ = ≠ ≤ ≥ ∞ ∑ √
+Emoji-Unterstützung: 😀 😊 👍 ❤️ 🎉 🚗 🏠 💡 📱 ⭐
+Einfache Einfügung in aktive Textfelder
+
+
+Tablet-Fernsteuerung:
+
+HTTP-Server auf Port 8080
+Responsive Web-Interface für Tablets
+Touch-Gesten (Wischen) für Navigation
+Echtzeit-Synchronisation
+QR-Code-freundliche URL
+
+
+
+📱 Tablet-Interface Features:
+
+Touch-Navigation: Wischen nach links/rechts für Folien-Navigation
+Tastatursteuerung: Pfeiltasten, Leertaste, ESC, F5, Zahlen 1-9
+Auto-Refresh: Automatische Synchronisation alle 3 Sekunden
+Responsive Design: Optimiert für verschiedene Bildschirmgrößen
+Bilderunterstützung: Anzeige von Creator-Bildern im Tablet-Interface
 
 ## 🏗️ Projektstruktur
 ```
@@ -56,7 +96,3 @@ Siehe `docs/` Verzeichnis für detaillierte Dokumentation:
 - ToolBox Design-Konzepte
 - Verbesserungsvorschläge
 
-## 🔧 Entwicklung
-**Autor:** Marvin Mayer  
-**Version:** 4.0.0  
-**Lizenz:** © 2025 Bertrandt AG
