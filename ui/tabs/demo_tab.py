@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Demo Tab für die Bertrandt GUI
-Präsentations-Modus mit Slide-Navigation und automatischer Steuerung
+Demo Tab für die Bertrandt GUI - С ПОЛНОЭКРАННЫМ РЕЖИМОМ
+Презентационный режим с Slide-Navigation и автоматическим управлением
 """
 
 import tkinter as tk
@@ -15,7 +15,7 @@ from models.content import content_manager
 from services.demo import demo_service
 
 class DemoTab:
-    """Demo-Tab für Live-Präsentationen"""
+    """Demo-Tab для Live-Презентаций с полноэкранным режимом"""
     
     def __init__(self, parent, main_window):
         self.parent = parent
@@ -24,49 +24,56 @@ class DemoTab:
         self.current_slide = 1
         self.total_slides = 10
         self.auto_play = False
-        self.auto_play_interval = 5  # Sekunden
+        self.auto_play_interval = 5  # Секунды
         self.auto_play_thread = None
         self.slide_buttons = {}
         self.last_update_time = 0
         
-        # Demo-Service Konfiguration
+        # Полноэкранный режим
+        self.fullscreen_window = None
+        self.is_fullscreen_mode = False
+        
+        # Demo-Service конфигурация
         self.demo_running = False
         
         self.create_demo_content()
         
-        # Content-Manager Observer hinzufügen
+        # Content-Manager Observer добавить
         content_manager.add_observer(self.on_content_changed)
         
     def on_content_changed(self, slide_id, slide_data, action='update'):
-        """Obroblyuvach zminy kontentu (synkhronizatsiya z Creator) - optimizovanyj"""
+        """Обработчик изменения контента (синхронизация с Creator) - оптимизированный"""
         try:
             current_time = time.time()
-            # Ogranicheniye chastoty obnovlenij - ne boleye raza v sekundu
+            # Ограничение частоты обновлений - не больше раза в секунду
             if current_time - self.last_update_time < 1.0:
                 return
             
             if action == 'update' or action == 'load':
-                # Obnovlyuvaty spisok slajdiv tilky yaksho zminilsya zagolovok
+                # Обновлять список слайдов только если изменился заголовок
                 if hasattr(slide_data, 'title'):
                     current_button = self.slide_buttons.get(slide_id)
                     if current_button:
-                        # Obnoviti tilky konkretnui knopku
+                        # Обновить только конкретную кнопку
                         title = slide_data.title
                         display_title = title[:20] + "..." if len(title) > 20 else title
                         current_button.configure(text=f"{slide_id}\n{display_title}")
                     else:
-                        # Povnistyu perestvoriti spisok tilky yaksho knopky ne isnuye
+                        # Полностью пересоздать список только если кнопки не существует
                         self.create_slides_list()
                 
-                # Peremalyuvaty potochnyj slajd yaksho vin buv zminenyj
+                # Перерисовать текущий слайд если он был изменен
                 if slide_id == self.current_slide:
                     self.render_current_slide()
+                    # Также обновить полноэкранный режим если активен
+                    if self.is_fullscreen_mode and self.fullscreen_window:
+                        self.update_fullscreen_slide()
                 
                 self.last_update_time = current_time
                 logger.debug(f"Demo synchronized with content changes for slide {slide_id}")
                 
             elif action == 'delete':
-                # Obrobyty vydalennya slajdu
+                # Обработать удаление слайда
                 if slide_id == self.current_slide and self.current_slide > 1:
                     self.current_slide -= 1
                 
@@ -77,36 +84,36 @@ class DemoTab:
             logger.error(f"Error handling content change in demo: {e}")
         
     def create_demo_content(self):
-        """Erstellt den Demo-Tab Inhalt"""
+        """Создает контент Demo-Tab"""
         colors = theme_manager.get_colors()
         fonts = self.main_window.fonts
         
-        # Haupt-Container
+        # Главный контейнер
         self.container = tk.Frame(self.parent, bg=colors['background_primary'])
         
         # Header-Toolbar
         self.create_demo_header()
         
-        # 2-Spalten Layout
+        # 2-колоночный Layout
         content_frame = tk.Frame(self.container, bg=colors['background_primary'])
         content_frame.pack(fill='both', expand=True, padx=10, pady=(0, 10))
         
         # Grid-Layout
         content_frame.grid_rowconfigure(0, weight=1)
-        content_frame.grid_columnconfigure(0, weight=0, minsize=300)  # Slide-Navigation (links)
-        content_frame.grid_columnconfigure(1, weight=1, minsize=900)  # Slide-Display (rechts)
+        content_frame.grid_columnconfigure(0, weight=0, minsize=300)  # Slide-Navigation (слева)
+        content_frame.grid_columnconfigure(1, weight=1, minsize=900)  # Slide-Display (справа)
         
-        # Spalte 1: Slide-Navigation
+        # Колонка 1: Slide-Navigation
         self.create_slide_navigation(content_frame)
         
-        # Spalte 2: Haupt-Display
+        # Колонка 2: Haupt-Display
         self.create_slide_display(content_frame)
         
-        # Footer mit Controls
+        # Footer с Controls
         self.create_demo_footer()
     
     def create_demo_header(self):
-        """Erstellt die Demo-Header"""
+        """Создает Demo-Header с кнопкой полноэкранного режима"""
         colors = theme_manager.get_colors()
         fonts = self.main_window.fonts
         
@@ -120,7 +127,7 @@ class DemoTab:
         header_frame.pack(fill='x', padx=10, pady=(10, 5))
         header_frame.pack_propagate(False)
         
-        # Titel
+        # Заголовок
         title_frame = tk.Frame(header_frame, bg=colors['background_secondary'])
         title_frame.pack(side='left', fill='y', padx=(15, 30))
         
@@ -142,7 +149,7 @@ class DemoTab:
         )
         subtitle_label.pack(anchor='w')
         
-        # Demo-Steuerung
+        # Demo-Управление
         controls_frame = tk.Frame(header_frame, bg=colors['background_secondary'])
         controls_frame.pack(side='left', fill='y', padx=20)
         
@@ -178,6 +185,22 @@ class DemoTab:
         )
         self.autoplay_button.pack(side='left', padx=(0, 10), pady=15)
         
+        # НОВАЯ КНОПКА: Полноэкранный режим
+        self.fullscreen_button = tk.Button(
+            controls_frame,
+            text="🖥️ Vollbild",
+            font=fonts['button'],
+            bg=colors['accent_primary'],
+            fg='white',
+            relief='flat',
+            bd=0,
+            padx=20,
+            pady=10,
+            cursor='hand2',
+            command=self.toggle_presentation_fullscreen
+        )
+        self.fullscreen_button.pack(side='left', padx=(0, 10), pady=15)
+        
         # Slide-Info
         info_frame = tk.Frame(header_frame, bg=colors['background_secondary'])
         info_frame.pack(side='right', fill='y', padx=(20, 15))
@@ -203,7 +226,7 @@ class DemoTab:
         self.progress_bar.pack()
     
     def create_slide_navigation(self, parent):
-        """Erstellt die Slide-Navigation (links)"""
+        """Создает Slide-Navigation (слева)"""
         colors = theme_manager.get_colors()
         fonts = self.main_window.fonts
         
@@ -285,22 +308,22 @@ class DemoTab:
         canvas.pack(side="left", fill="both", expand=True, padx=(0, 5))
         scrollbar.pack(side="right", fill="y")
         
-        # Slides erstellen
+        # Создать slides
         self.create_slides_list()
     
     def create_slides_list(self):
-        """Erstellt die Slides-Liste optimiziert"""
+        """Создает Slides-Liste оптимизированный"""
         colors = theme_manager.get_colors()
         fonts = self.main_window.fonts
         
-        # Content-Manager verwenden
+        # Content-Manager использовать
         slides = content_manager.get_all_slides()
         
         if not slides:
             logger.warning("Keine Slides gefunden für Demo")
             return
         
-        # Lösche nur wenn komplett neue Struktur nötig
+        # Удалить только если полностью новая структура нужна
         if len(self.slide_buttons) != len(slides):
             for widget in self.slides_frame.winfo_children():
                 widget.destroy()
@@ -308,23 +331,23 @@ class DemoTab:
         
         for slide_id, slide in slides.items():
             try:
-                # Prüfe ob Button bereits existiert
+                # Проверить есть ли Button уже
                 if slide_id in self.slide_buttons:
-                    # Aktualisiere nur den Text
+                    # Обновить только текст
                     button = self.slide_buttons[slide_id]
                     title = slide.title
                     display_title = title[:20] + "..." if len(title) > 20 else title
                     button.configure(text=f"{slide_id}\n{display_title}")
                     continue
                 
-                # Erstelle neuen Button nur wenn nötig
+                # Создать новый Button только если нужно
                 slide_container = tk.Frame(
                     self.slides_frame,
                     bg=colors['background_secondary']
                 )
                 slide_container.pack(fill='x', pady=2)
                 
-                # Button Style abhängig von Aktivität
+                # Button Style в зависимости от активности
                 is_active = slide_id == self.current_slide
                 bg_color = colors['accent_primary'] if is_active else colors['background_tertiary']
                 
@@ -353,12 +376,12 @@ class DemoTab:
             except Exception as e:
                 logger.error(f"Fehler beim Erstellen von Slide-Button {slide_id}: {e}")
         
-        # Total slides aktualisieren
+        # Total slides обновить
         self.total_slides = len(slides)
         self.update_slide_info()
     
     def create_slide_display(self, parent):
-        """Erstellt das Haupt-Slide-Display (rechts)"""
+        """Создает Haupt-Slide-Display (справа)"""
         colors = theme_manager.get_colors()
         fonts = self.main_window.fonts
         
@@ -384,28 +407,28 @@ class DemoTab:
         )
         self.current_slide_label.pack(anchor='w')
         
-        # Slide Canvas - Hauptanzeige
+        # Slide Canvas - Основной дисплей
         canvas_frame = tk.Frame(display_frame, bg=colors['background_secondary'])
         canvas_frame.pack(fill='both', expand=True, padx=10, pady=(10, 10))
         
-        # Slide Canvas erstellen
+        # Создать Slide Canvas
         self.slide_canvas = tk.Canvas(
             canvas_frame,
-            bg='#FFFFFF',  # Weiß für Slides
+            bg='#FFFFFF',  # Белый для слайдов
             relief='flat',
             bd=2,
             highlightthickness=0
         )
         self.slide_canvas.pack(fill='both', expand=True)
         
-        # Canvas-Größe überwachen
+        # Отслеживать размер Canvas
         self.slide_canvas.bind('<Configure>', self.on_canvas_resize)
         
-        # Initiale Slide laden
+        # Начальный Slide загрузить
         self.slide_canvas.after(100, self.load_current_slide)
     
     def create_demo_footer(self):
-        """Erstellt den Demo-Footer"""
+        """Создает Demo-Footer"""
         colors = theme_manager.get_colors()
         fonts = self.main_window.fonts
         
@@ -417,7 +440,7 @@ class DemoTab:
         footer_frame.pack(fill='x', padx=10, pady=5)
         footer_frame.pack_propagate(False)
         
-        # Links: Timer-Info
+        # Слева: Timer-Info
         timer_frame = tk.Frame(footer_frame, bg=colors['background_secondary'])
         timer_frame.pack(side='left', fill='y', padx=15)
         
@@ -430,13 +453,14 @@ class DemoTab:
         )
         self.timer_label.pack(pady=15)
         
-        # Rechts: Vollbild Controls
+        # Справа: Vollbild Controls
         controls_frame = tk.Frame(footer_frame, bg=colors['background_secondary'])
         controls_frame.pack(side='right', fill='y', padx=15)
         
-        fullscreen_btn = tk.Button(
+        # Кнопка полноэкранного режима приложения (не презентации)
+        app_fullscreen_btn = tk.Button(
             controls_frame,
-            text="⛶ Vollbild",
+            text="⛶ App Vollbild",
             font=fonts['caption'],
             bg=colors['background_tertiary'],
             fg=colors['text_primary'],
@@ -447,21 +471,159 @@ class DemoTab:
             cursor='hand2',
             command=self.main_window.toggle_fullscreen
         )
-        fullscreen_btn.pack(pady=8)
+        app_fullscreen_btn.pack(pady=8)
+    
+    def toggle_presentation_fullscreen(self):
+        """Переключает полноэкранный режим презентации"""
+        try:
+            if not self.is_fullscreen_mode:
+                self.enter_presentation_fullscreen()
+            else:
+                self.exit_presentation_fullscreen()
+        except Exception as e:
+            logger.error(f"Error toggling presentation fullscreen: {e}")
+    
+    def enter_presentation_fullscreen(self):
+        """Входит в полноэкранный режим презентации"""
+        try:
+            # Создать новое полноэкранное окно
+            self.fullscreen_window = tk.Toplevel(self.main_window.root)
+            self.fullscreen_window.title("Bertrandt Präsentation - Vollbild")
+            
+            # Настройки полноэкранного окна
+            self.fullscreen_window.attributes('-fullscreen', True)
+            self.fullscreen_window.attributes('-topmost', True)
+            self.fullscreen_window.configure(bg='black')
+            
+            # Canvas для слайда во весь экран
+            self.fullscreen_canvas = tk.Canvas(
+                self.fullscreen_window,
+                bg='#FFFFFF',
+                highlightthickness=0,
+                bd=0
+            )
+            self.fullscreen_canvas.pack(fill='both', expand=True)
+            
+            # Управление с клавиатуры
+            self.fullscreen_window.bind('<KeyPress>', self.on_fullscreen_key)
+            self.fullscreen_window.bind('<Button-1>', self.on_fullscreen_click)
+            self.fullscreen_window.focus_set()
+            
+            # Обработчик закрытия
+            self.fullscreen_window.protocol("WM_DELETE_WINDOW", self.exit_presentation_fullscreen)
+            
+            # Отрисовать текущий слайд
+            self.fullscreen_window.after(100, self.update_fullscreen_slide)
+            
+            self.is_fullscreen_mode = True
+            
+            # Обновить кнопку
+            self.fullscreen_button.configure(
+                text="📱 Fenster",
+                bg=theme_manager.get_colors()['accent_warning']
+            )
+            
+            logger.info("Presentation fullscreen mode activated")
+            
+        except Exception as e:
+            logger.error(f"Error entering presentation fullscreen: {e}")
+    
+    def exit_presentation_fullscreen(self):
+        """Выходит из полноэкранного режима презентации"""
+        try:
+            if self.fullscreen_window:
+                self.fullscreen_window.destroy()
+                self.fullscreen_window = None
+            
+            self.is_fullscreen_mode = False
+            
+            # Восстановить кнопку
+            self.fullscreen_button.configure(
+                text="🖥️ Vollbild",
+                bg=theme_manager.get_colors()['accent_primary']
+            )
+            
+            logger.info("Presentation fullscreen mode deactivated")
+            
+        except Exception as e:
+            logger.error(f"Error exiting presentation fullscreen: {e}")
+    
+    def on_fullscreen_key(self, event):
+        """Обработчик клавиш в полноэкранном режиме"""
+        try:
+            if event.keysym == 'Escape':
+                self.exit_presentation_fullscreen()
+            elif event.keysym in ['Right', 'space', 'Next']:
+                self.next_slide()
+            elif event.keysym in ['Left', 'Prior']:
+                self.previous_slide()
+            elif event.keysym == 'F5':
+                self.toggle_demo()
+            elif event.keysym.isdigit():
+                slide_num = int(event.keysym)
+                if 1 <= slide_num <= self.total_slides:
+                    self.goto_slide(slide_num)
+        except Exception as e:
+            logger.error(f"Error handling fullscreen key: {e}")
+    
+    def on_fullscreen_click(self, event):
+        """Обработчик кликов в полноэкранном режиме - переход к следующему слайду"""
+        try:
+            self.next_slide()
+        except Exception as e:
+            logger.error(f"Error handling fullscreen click: {e}")
+    
+    def update_fullscreen_slide(self):
+        """Обновляет слайд в полноэкранном режиме"""
+        try:
+            if not self.is_fullscreen_mode or not self.fullscreen_window or not self.fullscreen_canvas:
+                return
+            
+            slide = content_manager.get_slide(self.current_slide)
+            if not slide:
+                return
+            
+            # Получить размеры полноэкранного canvas
+            self.fullscreen_window.update_idletasks()
+            canvas_width = self.fullscreen_canvas.winfo_width()
+            canvas_height = self.fullscreen_canvas.winfo_height()
+            
+            if canvas_width > 10 and canvas_height > 10:
+                # Подготовить данные слайда
+                slide_data = {
+                    'title': slide.title,
+                    'content': slide.content,
+                    'slide_number': self.current_slide,
+                    'background_color': '#FFFFFF',
+                    'text_color': '#1F1F1F'
+                }
+                
+                # Использовать тот же рендерер
+                SlideRenderer.render_slide_to_canvas(
+                    self.fullscreen_canvas,
+                    slide_data,
+                    canvas_width,
+                    canvas_height
+                )
+                
+                logger.debug(f"Updated fullscreen slide {self.current_slide}")
+                
+        except Exception as e:
+            logger.error(f"Error updating fullscreen slide: {e}")
     
     def load_current_slide(self):
-        """Lädt und zeigt den aktuellen Slide"""
+        """Загружает и показывает текущий слайд"""
         try:
             slide = content_manager.get_slide(self.current_slide)
             
             if slide:
-                # Slide-Titel aktualisieren
+                # Обновить заголовок слайда
                 self.current_slide_label.configure(text=f"Demo-Folie {self.current_slide}: {slide.title}")
                 
-                # Slide rendern
+                # Отрисовать слайд
                 self.render_current_slide()
                 
-                # Navigation aktualisieren
+                # Обновить navigation
                 self.update_slide_navigation()
                 self.update_slide_info()
                 
@@ -474,19 +636,19 @@ class DemoTab:
             logger.error(f"Error loading slide {self.current_slide}: {e}")
     
     def render_current_slide(self):
-        """Rendert den aktuellen Slide auf die Canvas"""
+        """Рендерит текущий слайд на Canvas"""
         try:
             slide = content_manager.get_slide(self.current_slide)
             
             if not slide:
                 return
             
-            # Canvas-Größe ermitteln
+            # Получить размер Canvas
             canvas_width = self.slide_canvas.winfo_width()
             canvas_height = self.slide_canvas.winfo_height()
             
             if canvas_width > 10 and canvas_height > 10:
-                # Slide-Daten vorbereiten
+                # Подготовить данные слайда
                 slide_data = {
                     'title': slide.title,
                     'content': slide.content,
@@ -495,7 +657,7 @@ class DemoTab:
                     'text_color': '#1F1F1F'
                 }
                 
-                # Slide mit dem gleichen Renderer wie Creator rendern
+                # Слайд с тем же рендерером что Creator рендерить
                 SlideRenderer.render_slide_to_canvas(
                     self.slide_canvas,
                     slide_data,
@@ -509,12 +671,12 @@ class DemoTab:
             logger.error(f"Error rendering slide: {e}")
     
     def on_canvas_resize(self, event):
-        """Canvas-Größenänderung behandeln"""
-        # Slide neu rendern bei Größenänderung
+        """Обработчик изменения размера Canvas"""
+        # Перерисовать слайд при изменении размера
         self.main_window.root.after(100, self.render_current_slide)
     
     def update_slide_navigation(self):
-        """Aktualisiert die Slide-Navigation Buttons"""
+        """Обновляет Slide-Navigation Buttons"""
         colors = theme_manager.get_colors()
         
         for slide_id, button in self.slide_buttons.items():
@@ -530,11 +692,11 @@ class DemoTab:
                 )
     
     def update_slide_info(self):
-        """Aktualisiert die Slide-Information"""
+        """Обновляет Slide-Information"""
         try:
             self.slide_info_label.configure(text=f"Slide {self.current_slide} von {self.total_slides}")
             
-            # Progress Bar aktualisieren
+            # Обновить Progress Bar
             if self.total_slides > 0:
                 progress = (self.current_slide / self.total_slides) * 100
                 self.progress_var.set(progress)
@@ -542,35 +704,48 @@ class DemoTab:
             logger.error(f"Error updating slide info: {e}")
     
     def goto_slide(self, slide_id):
-        """Geht zu einem bestimmten Slide"""
+        """Переходит к определенному слайду"""
         try:
             self.current_slide = slide_id
             self.load_current_slide()
+            
+            # Обновить полноэкранный режим если активен
+            if self.is_fullscreen_mode:
+                self.update_fullscreen_slide()
+                
             logger.info(f"Demo: Navigated to slide {slide_id}")
         except Exception as e:
             logger.error(f"Error going to slide {slide_id}: {e}")
     
     def previous_slide(self):
-        """Geht zum vorherigen Slide"""
+        """Переходит к предыдущему слайду"""
         if self.current_slide > 1:
             self.current_slide -= 1
             self.load_current_slide()
+            
+            # Обновить полноэкранный режим если активен
+            if self.is_fullscreen_mode:
+                self.update_fullscreen_slide()
     
     def next_slide(self):
-        """Geht zum nächsten Slide"""
+        """Переходит к следующему слайду"""
         if self.current_slide < self.total_slides:
             self.current_slide += 1
             self.load_current_slide()
-        elif self.auto_play:  # Restart bei Auto-Play
+        elif self.auto_play:  # Restart при Auto-Play
             self.current_slide = 1
             self.load_current_slide()
+        
+        # Обновить полноэкранный режим если активен
+        if self.is_fullscreen_mode:
+            self.update_fullscreen_slide()
     
     def toggle_demo(self):
-        """Startet oder stoppt die Demo"""
+        """Запускает или останавливает Demo"""
         colors = theme_manager.get_colors()
         
         if not self.demo_running:
-            # Demo starten
+            # Запустить Demo
             self.demo_running = True
             demo_service.start_demo(self.current_slide)
             
@@ -583,7 +758,7 @@ class DemoTab:
             logger.info("Demo gestartet")
             
         else:
-            # Demo stoppen
+            # Остановить Demo
             self.demo_running = False
             demo_service.stop_demo()
             
@@ -597,7 +772,7 @@ class DemoTab:
             logger.info("Demo gestoppt")
     
     def toggle_autoplay(self):
-        """Schaltet Auto-Play ein/aus"""
+        """Включает/выключает Auto-Play"""
         colors = theme_manager.get_colors()
         
         if not self.auto_play:
@@ -614,14 +789,14 @@ class DemoTab:
             )
     
     def start_autoplay(self):
-        """Startet Auto-Play"""
+        """Запускает Auto-Play"""
         self.auto_play = True
         self.auto_play_thread = threading.Thread(target=self.autoplay_worker, daemon=True)
         self.auto_play_thread.start()
         logger.info("Auto-Play gestartet")
     
     def stop_autoplay(self):
-        """Stoppt Auto-Play"""
+        """Останавливает Auto-Play"""
         self.auto_play = False
         if self.auto_play_thread and self.auto_play_thread.is_alive():
             self.auto_play_thread.join(timeout=0.5)
@@ -631,41 +806,45 @@ class DemoTab:
         """Auto-Play Worker-Thread"""
         while self.auto_play:
             time.sleep(self.auto_play_interval)
-            if self.auto_play:  # Nochmal prüfen nach sleep
+            if self.auto_play:  # Еще раз проверить после sleep
                 self.main_window.root.after(0, self.next_slide)
     
     def refresh_theme(self):
-        """Aktualisiert das Theme für den Demo-Tab"""
+        """Обновляет тему для Demo-Tab"""
         try:
             colors = theme_manager.get_colors()
             
             if hasattr(self, 'container'):
                 self.container.configure(bg=colors['background_primary'])
             
-            # Slides-Liste neu erstellen für Theme-Update
+            # Заново создать Slides-Liste для обновления темы
             self.create_slides_list()
             
-            logger.debug("Demo-Tab Theme aktualisiert")
+            logger.debug("Demo-Tab Theme обновлен")
         except Exception as e:
             logger.error(f"Error refreshing demo theme: {e}")
     
     def show(self):
-        """Zeigt den Demo-Tab"""
+        """Показывает Demo-Tab"""
         if not self.visible:
             self.container.pack(fill='both', expand=True)
             self.visible = True
             
-            # Aktuellen Slide laden
+            # Загрузить текущий слайд
             self.load_current_slide()
             
             logger.debug("Demo-Tab angezeigt")
     
     def hide(self):
-        """Versteckt den Demo-Tab"""
+        """Скрывает Demo-Tab"""
         if self.visible:
-            # Demo stoppen falls läuft
+            # Остановить Demo если запущен
             if self.demo_running:
                 self.toggle_demo()
+            
+            # Выйти из полноэкранного режима если активен
+            if self.is_fullscreen_mode:
+                self.exit_presentation_fullscreen()
             
             self.container.pack_forget()
             self.visible = False
